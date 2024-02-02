@@ -17,7 +17,7 @@ def foo():
 
 def create_MR_mask_including(in_IDs, segfile_path, opROI_name, op_dir):
     """
-    Create an MR mask (binary image) that includes the given ROIs. 
+    Create an MR mask (binary .nii.gz image) that includes the given ROIs. 
 
     Parameters
     ----------
@@ -65,7 +65,7 @@ def create_MR_mask_including(in_IDs, segfile_path, opROI_name, op_dir):
 
 def create_MR_mask_excluding(ex_IDs, segfile_path, opROI_name, op_dir):
     """
-    Create an MR mask (binary image) that excludes the given ROIs. 
+    Create an MR mask (binary .nii.gz image) that excludes the given ROIs. 
 
     Parameters
     ----------
