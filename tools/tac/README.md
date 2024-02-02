@@ -1,1 +1,0 @@
-# Time-Activity Curve Functions
