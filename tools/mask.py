@@ -7,6 +7,7 @@ import numpy as np
 import nibabel as nib
 import copy
 import os
+from . import aux  # NOTE: simply "import aux" won't work
 
 
 
@@ -33,10 +34,8 @@ def create_MR_mask_including(in_IDs, segfile_path, opROI_name, op_dir):
 
     Returns
     -------
-    opmask_fullname: string
-        The full name of the output mask file, ending in .nii.gz
     opmask_path: string, file path
-        The path of the output mask file. 
+        The path of the output mask file, ending in .nii.gz
 
     """
     
@@ -58,7 +57,7 @@ def create_MR_mask_including(in_IDs, segfile_path, opROI_name, op_dir):
     # Save the nifti mask image
     nib.save(mask_opROI, opmask_path)
     
-    return opmask_fullname, opmask_path
+    return opmask_path
     
     
 
@@ -81,10 +80,8 @@ def create_MR_mask_excluding(ex_IDs, segfile_path, opROI_name, op_dir):
 
     Returns
     -------
-    opmask_fullname: string
-        The name of the output mask file, ending in .nii.gz
     opmask_path: string, file path
-        The path of the output mask file. 
+        The path of the output mask file, ending in .nii.gz
 
     """
     
@@ -106,13 +103,14 @@ def create_MR_mask_excluding(ex_IDs, segfile_path, opROI_name, op_dir):
     # Save the nifti mask image
     nib.save(mask_opROI, opmask_path)
     
-    return opmask_fullname, opmask_path
+    return opmask_path
+
 
 
 
             
             
-def linear_transform(ipmask_path, ipmask_fullname, inDomain, outDomain, lta_path, thr, save_bfthr_mask, op_dir):
+def linear_transform(ipmask_path, inDomain, outDomain, lta_path, thr, save_bfthr_mask, op_dir):
     """
     Performs linear transform of the input mask from inDomain to outDomain. 
 
@@ -120,8 +118,6 @@ def linear_transform(ipmask_path, ipmask_fullname, inDomain, outDomain, lta_path
     ----------
     ipmask_path : string, directory path
         The path of the input mask .nii.gz file. 
-    iipmask_fullname : string
-        The full name of the input mask file, ending in .nii.gz. Should contain the inDomain string. 
     inDomain : string
         The input domain, 'mr' or 'pet'
     outDomain : string
@@ -137,31 +133,26 @@ def linear_transform(ipmask_path, ipmask_fullname, inDomain, outDomain, lta_path
 
     Returns
     -------
-    opmask_fullname: string
-        The full name of the output mask file, ending in .nii.gz
     opmask_path: string, file path
-        The path of the output mask file. 
+        The path of the output mask file, ending in .nii.gz
 
     """
     
     # dashed versions of inDomain and outDomain
     inD = f'_{inDomain}_'
     outD = f'_{outDomain}_'
-
-    assert inD in ipmask_fullname, f"The ipmask_fullname should contain {inD}"
     
-    # split from the first occurrence of '.'
-    # e.g.: mask_mr_cerebellum.nii.gz => mask_mr_cerebellum and nii.gz
-    ipmask_basename, extension = ipmask_fullname.split('.', 1)
+    ipmask_basename, extension = aux.extract_file_name(ipmask_path)
+
+    assert inD in ipmask_basename, f"The mask name {ipmask_basename} should contain {inD}"
     
     # create the output mask'a base name by replacing the first occurence of inD in ipmask_name with outD
     opmask_basename = ipmask_basename.replace(inD, outD, 1)
     
     # names and path of the bfthr output mask
     opmask_bfthr_basename = opmask_basename + '_bfthr'
-    opmask_bfthr_fullname = opmask_bfthr_basename + '.' + extension
+    opmask_bfthr_fullname = opmask_bfthr_basename + extension
     opmask_bfthr_path = os.path.join(op_dir, opmask_bfthr_fullname)
-    print(f'opmask_bfthr_path: {opmask_bfthr_path}')
     
     # map the input mask from inDomain to outDomain
     # mapped mask has decimal values
@@ -176,7 +167,7 @@ def linear_transform(ipmask_path, ipmask_fullname, inDomain, outDomain, lta_path
     opmask = nib.Nifti1Image(opmask_data, opmask_bfthr.affine, opmask_bfthr.header)
     
     # name and path of the binary output mask
-    opmask_fullname = opmask_basename + '.' + extension
+    opmask_fullname = opmask_basename + extension
     opmask_path = os.path.join(op_dir, opmask_fullname)
     nib.save(opmask, opmask_path)
         
@@ -184,12 +175,12 @@ def linear_transform(ipmask_path, ipmask_fullname, inDomain, outDomain, lta_path
         # delete the intermediate bfthr mask
         os.remove(opmask_bfthr_path)
 
-    return opmask_fullname, opmask_path
+    return opmask_path
             
             
 
             
-
+#def generate_masked_img(ipimage_path, mask_path)
             
         
             
