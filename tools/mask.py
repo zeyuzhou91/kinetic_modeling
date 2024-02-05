@@ -16,7 +16,7 @@ def foo():
     return None
 
 
-def create_MR_mask_including(in_IDs, segfile_path, opROI_name, op_dir):
+def create_MR_mask_including(in_IDs, seg_path, opROI_name, op_dir):
     """
     Create an MR mask (binary .nii.gz image) that includes the given ROIs. 
 
@@ -24,7 +24,7 @@ def create_MR_mask_including(in_IDs, segfile_path, opROI_name, op_dir):
     ----------
     in_IDs : a list of integers
         The integer IDs of ROIs that the mask should include. 
-    segfile_path : string, file path
+    seg_path : string, file path
         The path of the MR segmentation file from which the mask is created. 
         The file should be .nii or .nii.gz 
     opROI_name : string 
@@ -40,7 +40,7 @@ def create_MR_mask_including(in_IDs, segfile_path, opROI_name, op_dir):
     """
     
     # load segmentation as an nifti image
-    seg = nib.load(segfile_path)
+    seg = nib.load(seg_path)
     
     # make a copy of the image (_data is np array)
     mask_opROI_data = copy.deepcopy(seg.get_fdata())
@@ -62,7 +62,7 @@ def create_MR_mask_including(in_IDs, segfile_path, opROI_name, op_dir):
     
 
 
-def create_MR_mask_excluding(ex_IDs, segfile_path, opROI_name, op_dir):
+def create_MR_mask_excluding(ex_IDs, seg_path, opROI_name, op_dir):
     """
     Create an MR mask (binary .nii.gz image) that excludes the given ROIs. 
 
@@ -70,7 +70,7 @@ def create_MR_mask_excluding(ex_IDs, segfile_path, opROI_name, op_dir):
     ----------
     ex_IDs : a list of integers
         The integer IDs of ROIs that the mask should exclude. 
-    segfile_path : string, file path 
+    seg_path : string, file path 
         The path of the MR segmentation file from which the mask is created. 
         The file should be .nii or .nii.gz 
     opROI_name : string 
@@ -86,7 +86,7 @@ def create_MR_mask_excluding(ex_IDs, segfile_path, opROI_name, op_dir):
     """
     
     # load segmentation as an nifti image
-    seg = nib.load(segfile_path)
+    seg = nib.load(seg_path)
     
     # make a copy of the image (_data is np array)
     mask_opROI_data = copy.deepcopy(seg.get_fdata())
