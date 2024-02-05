@@ -180,7 +180,78 @@ def linear_transform(ipmask_path, inDomain, outDomain, lta_path, thr, save_bfthr
             
 
             
-#def generate_masked_img(ipimage_path, mask_path)
+def generate_masked_img(ipimg_path, mask_path, maskedROI_name, op_dir):
+    """
+    For a given input image, apply a binary mask and generate a masked image. 
+
+    Parameters
+    ----------
+    ipimg_path : string, file path
+        The file path of the input image, ending in .nii or .nii.gz. 
+        The input image can be either 3D (one frame) or 4D (multi-frame).
+    mask_path : string, file path
+        The file path of the binary mask, ending in .niior .nii.gz.
+        The mask should be 3D. 
+    maskedROI_name : string
+        The name of the masked ROI.
+    op_dir : string, directory path
+        The path of the output directory where the masked image is stored. 
+
+    Returns
+    -------
+    opimage_path : string, file path
+        The path of the output masked image file, ending in .nii or .nii.gz.
+        The output image is of the same dimension as the input image. 
+    """
+    
+    # Load the input image
+    ipimg = nib.load(ipimg_path)
+    ipimg_data = ipimg.get_fdata()
+    
+    # Load the mask
+    mask = nib.load(mask_path)
+    mask_data = mask.get_fdata()
+    
+
+    
+    if len(ipimg.shape) == 3:
+        # one frame (i.e. single 3D image)
+        
+        assert ipimg.shape == mask.shape, f"""The input image {ipimg_path} (shape = {ipimg_data.shape}) and 
+        the mask {mask_path} (shape = mask_data.shape) should have the same dimension."""
+    
+        # Generate the output nifti image
+        opimg_data = ipimg_data * mask_data
+        
+    elif len(ipimg.shape) == 4:
+        # multi-frame 
+        
+        num_frames = ipimg.shape[-1]
+        
+        assert ipimg.shape[0:3] == mask.shape, f"""Each frame of the input image {ipimg_path} (shape = {ipimg.shape[0:3]}) and 
+        the mask {mask_path} (shape = mask_data.shape) should have the same dimension."""
+    
+        opimg_data = copy.deepcopy(ipimg_data)
+        for i in range(num_frames):
+            opimg_data[..., i] = ipimg_data[..., i] * mask_data
+
+
+    opimg = nib.Nifti1Image(opimg_data, ipimg.affine, ipimg.header)
+
+
+    ipimg_basename, extension = aux.extract_file_name(ipimg_path)
+        
+    # Generate the output image's name and path
+    # E.g. if input image = frame5.nii.gz and maskedROI_name is "cerebellum"
+    # Then output image = frame5_cerebellum.nii.gz
+    opimg_basename = ipimg_basename + '_' + maskedROI_name
+    opimg_fullname = opimg_basename + extension
+    opimg_path = os.path.join(op_dir, opimg_fullname)
+
+
+    nib.save(opimg, opimg_path)
+    
+    return opimg_path
             
         
             
