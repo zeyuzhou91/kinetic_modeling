@@ -177,9 +177,59 @@ def linear_transform(ipmask_path, inDomain, outDomain, lta_path, thr, save_bfthr
 
     return opmask_path
             
-            
+
+
+
+def create_PET_mask_including(in_IDs, thr, save_PET_bfthr_mask, save_MR_mask, opROI_name, op_dir, env):
+    """
+    Create an MR mask (binary .nii.gz image) that includes the given ROIs. 
+    
+    Parameters
+    ----------
+    in_IDs : a list of integers
+        The integer IDs of ROIs that the mask should include. 
+    thr : float in [0, 1]
+        The threshold for deciding 0 or 1 for decimal voxel values in the mask transformed from MR domain to PET domain.
+    save_PET_bfthr_mask : boolean
+        True: save the intermediate decimal-valued PET mask before thresholding; False: do not save. 
+    save_MR_mask : boolean
+        True: save the intermediate MR mask; False: do not save.
+    opROI_name : string 
+        The name of the output combined ROI. 
+    op_dir : string, directory path
+        The path of the output directory where the output mask is stored. 
+    env : an Environment object
+        Includes the environment paths. 
+
+    Returns
+    -------
+    PETmask_path : TYPE
+        DESCRIPTION.
+    """
+
+    MRmask_path = create_MR_mask_including(
+        in_IDs = in_IDs,
+        seg_path = env.seg_path,
+        opROI_name = opROI_name,
+        op_dir = env.masks_dir)
+
+    PETmask_path = linear_transform(
+        ipmask_path = MRmask_path,
+        inDomain = 'mr',
+        outDomain = 'pet',
+        lta_path = env.mr2pet_lta_path,
+        thr = thr,
+        save_bfthr_mask = save_PET_bfthr_mask,
+        op_dir = op_dir)
+
+    if save_MR_mask == False:
+        # delete the MR mask
+        os.remove(MRmask_path)
+        
+    return PETmask_path
 
             
+
 def generate_masked_img(ipimg_path, mask_path, maskedROI_name, op_dir):
     """
     For a given input image, apply a binary mask and generate a masked image. 
