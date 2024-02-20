@@ -90,7 +90,13 @@ def extract_PET_ROI_info(PETimg_path, ROImask_path, ROI, op_dir):
            
     opfile_name = f'{ROI.name}_avgIntensity.csv'
     opfile_path = os.path.join(op_dir, opfile_name)
-    aux.write_to_csv_onecol('Avg Intensity', ROI.avg_intensity, opfile_path)
+    
+    # ad-hoc scaling, TO UPDATE
+    for i in range(len(ROI.avg_intensity)):
+        ROI.avg_intensity[i] /= 1000.0  # from Bq/mL to kBq/mL
+    
+    # The unit 'kBq/mL may need to be user-input, TO UPDATE
+    aux.write_to_csv_onecol(ROI.avg_intensity, 'Avg Intensity', 'kBq/mL', opfile_path)
     
     return opfile_path
             
