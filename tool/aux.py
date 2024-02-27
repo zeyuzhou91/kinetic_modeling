@@ -6,6 +6,8 @@ import os
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.typing import NDArray
+from ..core import ROI, Environment
 
 
 
@@ -27,6 +29,7 @@ class Environment:
         self.AIF_ptac_path = ''
         self.AIF_pif_path = ''
         self.AIF_p2wb_ratio_path = ''
+
 
 class ROI:
     def __init__(self, name):
@@ -195,21 +198,13 @@ def extract_file_name(file_path):
     
 
 
-def write_to_csv_onecol(arr, header, unit, csvfile_path):
+def write_to_csv_onecol(arr: NDArray, header: str, unit: str, csvfile_path: str) -> None:
     """
     Write a 1D array to a CSV file as a column. 
 
     Parameters
     ----------
-    header : string
-    unit: string
-    arr : list of numbers
-    csvfile_path : string, file path, ending in .csv
-
-    Returns
-    -------
-    None.
-
+    csvfile_path : file path, ending in .csv
     """
     
     with open(csvfile_path, 'w', newline='') as csvfile:
@@ -264,23 +259,17 @@ def write_to_csv_twocols(header1, arr1, header2, arr2, csvfile_path):
 
 
 
-def read_from_csv_onecol(csvfile_path):
+def read_from_csv_onecol(filepath: str) -> (list[float], str, str):
     """
     Read a CSV file with one column, output the header, unit, and the data.
 
     Parameters
     ----------
-    csvfile_path : string, file path, ending in .csv
-        Only has one column, with the first row being the header. 
-
-    Returns
-    -------
-    data : list of floats
-    header : string
-    unit: string
+    filepath : file path ending in .csv. Only has one column, 1st row is header,
+                    2nd row is unit. 
     """
     
-    with open(csvfile_path, 'r') as csvfile:
+    with open(filepath, 'r') as csvfile:
         # Create a CSV reader object
         csv_reader = csv.reader(csvfile)
 
@@ -297,33 +286,21 @@ def read_from_csv_onecol(csvfile_path):
     
 
 
-def read_from_csv_twocols(csvfile_path):
+def read_from_csv_twocols(filepath: str) -> (list[float], str, str, list[float], str, str):
     """
-    Read a CSV file with two columns, output the two columns as two lists. 
+    Read a CSV file with two columns, output the data. 
 
     Parameters
     ----------
-    csvfile_path : string, file path, ending in .csv
-        Has two columns. The first row contains the headers.
-        The second row contains the units. 
-
-    Returns
-    -------
-    header1: string
-    unit1: string
-    data1 : list of floats
-    header2: string
-    unit2: string
-    data2 : list of floats
-
+    filepath : file path, ending in .csv. Has two columns, 1st row is headers,
+        2nd row is units. 
     """
-    
     
     data1 = []
     data2 = []
 
     # Read from CSV file
-    with open(csvfile_path, 'r') as csvfile:
+    with open(filepath, 'r') as csvfile:
         # Create a CSV reader object
         csv_reader = csv.reader(csvfile)
 
@@ -345,7 +322,71 @@ def read_from_csv_twocols(csvfile_path):
             data1.append(float(row[0]))
             data2.append(float(row[1]))
 
-    return header1, unit1, data1, header2, unit2, data2    
+    return data1, header1, unit1, data2, header2, unit2     
+
+
+
+def model_unit_table(model_name: str) -> dict[str, str]:
+    """
+    Given the model name, return the unit table of the model. 
+    """
+    
+    unit_table = {}
+    
+    if model_name == '1TCM':
+        unit_table = {'K1': 'mL/min/mL',
+                      'k2': '/min',
+                      'VB': 'unitless',
+                      'VD': 'unitless'}
+    
+    elif model_name == '2TCM':
+        unit_table = {'K1': 'mL/min/mL',
+                      'k2': '/min',
+                      'k3': '/min',
+                      'k4': '/min',
+                      'VB': 'unitless',
+                      'VND': 'unitless',
+                      'VS': 'unitless',
+                      'VT': 'unitless',
+                      'BPND': 'unitless'}
+    
+    return unit_table
+
+
+def export_km_params(
+        rois: list[ROI], 
+        model_name: str, 
+        opfile_path: str) -> None:
+    """
+    Export kinetic modeling parameters of the given ROIs to an csv file. 
+    """
+    
+    unit_table = model_unit_table(model_name)
+
+    header_row = ['Tissue']
+    unit_row = ['']
+    for par in rois[0].m.params.keys():
+        header_row.append(par)
+        unit_row.append(unit_table[par])
+    
+    
+    # Writing to CSV file
+    with open(opfile_path, 'w', newline='') as csvfile:
+        # Create a CSV writer object
+        csv_writer = csv.writer(csvfile)
+            
+        # Write the header row
+        csv_writer.writerow(header_row)
+        
+        # Write the unit row
+        csv_writer.writerow(unit_row)
+    
+        for roi in rois:
+            row = [roi.name] + list(roi.m.params.values())
+            csv_writer.writerow(row)
+            
+    return None
+
 
 
             

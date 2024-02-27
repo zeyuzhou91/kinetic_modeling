@@ -8,34 +8,29 @@ import nibabel as nib
 import copy
 import os
 from . import aux  # NOTE: simply "import aux" won't work
+from ..core import Environment 
 
 
 
-def foo():
-    print("Hello, this is the foo function in mask.py.")
-    return None
-
-
-def create_MR_mask_including(in_IDs, seg_path, opROI_name, op_dir):
+def create_MR_mask_including(
+        in_IDs: list[int], 
+        seg_path: str, 
+        opROI_name: str, 
+        op_dir: str) -> str:
     """
     Create an MR mask (binary .nii.gz image) that includes the given ROIs. 
 
     Parameters
     ----------
-    in_IDs : a list of integers
-        The integer IDs of ROIs that the mask should include. 
-    seg_path : string, file path
-        The path of the MR segmentation file from which the mask is created. 
-        The file should be .nii or .nii.gz 
-    opROI_name : string 
-        The name of the output combined ROI. 
-    op_dir : string, directory path
-        The path of the output directory where the output mask is stored. 
+    in_IDs : The integer IDs of ROIs that the mask should include. 
+    seg_path : file path. The path of the MR segmentation file from which the 
+               mask is created. The file should be .nii or .nii.gz.
+    opROI_name : The name of the output combined ROI. 
+    op_dir : directory path. The path of the output directory where the output mask is stored. 
 
     Returns
     -------
-    opmask_path: string, file path
-        The path of the output mask file, ending in .nii.gz
+    opmask_path: file path. The path of the output mask file, ending in .nii.gz.
 
     """
     
@@ -62,26 +57,25 @@ def create_MR_mask_including(in_IDs, seg_path, opROI_name, op_dir):
     
 
 
-def create_MR_mask_excluding(ex_IDs, seg_path, opROI_name, op_dir):
+def create_MR_mask_excluding(
+        ex_IDs: list[int], 
+        seg_path: str, 
+        opROI_name: str, 
+        op_dir: str) -> str:
     """
     Create an MR mask (binary .nii.gz image) that excludes the given ROIs. 
 
     Parameters
     ----------
-    ex_IDs : a list of integers
-        The integer IDs of ROIs that the mask should exclude. 
-    seg_path : string, file path 
-        The path of the MR segmentation file from which the mask is created. 
-        The file should be .nii or .nii.gz 
-    opROI_name : string 
-        The name of the output combined ROI. 
-    op_dir : string, directory path
-        The path of the output directory where the output mask is stored. 
+    ex_IDs : The integer IDs of ROIs that the mask should exclude. 
+    seg_path : file path. The path of the MR segmentation file from which the 
+               mask is created. The file should be .nii or .nii.gz.
+    opROI_name : The name of the output combined ROI. 
+    op_dir : directory path. The path of the output directory where the output mask is stored. 
 
     Returns
     -------
-    opmask_path: string, file path
-        The path of the output mask file, ending in .nii.gz
+    opmask_path: file path. The path of the output mask file, ending in .nii.gz
 
     """
     
@@ -108,33 +102,33 @@ def create_MR_mask_excluding(ex_IDs, seg_path, opROI_name, op_dir):
 
 
 
-            
-            
-def linear_transform(ipmask_path, inDomain, outDomain, lta_path, thr, save_bfthr_mask, op_dir):
+
+def linear_transform(
+        ipmask_path: str, 
+        inDomain: str, 
+        outDomain: str, 
+        lta_path: str, 
+        thr: float, 
+        save_bfthr_mask: bool, 
+        op_dir: str) -> str:
     """
     Performs linear transform of the input mask from inDomain to outDomain. 
 
     Parameters
     ----------
-    ipmask_path : string, directory path
-        The path of the input mask .nii.gz file. 
-    inDomain : string
-        The input domain, 'mr' or 'pet'
-    outDomain : string
-        The output domain, 'mr' or 'pet'
-    lta_path : string, file path
-        The path of the .reg.lta file, containing information of the linear transform. 
-    thr : float in [0, 1]
-        The threshold for deciding 0 or 1 for decimal voxel values in output mask. 
-    save_bfthr_mask : boolean
-        True: save the intermediate decimal-valued mask before thresholding; False: do not save.  
-    op_dir : string, directory path
-        The path of the output directory where the output mask is stored. 
+    ipmask_path : directory path. The path of the input mask .nii.gz file. 
+    inDomain : The input domain, 'mr' or 'pet'.
+    outDomain : The output domain, 'mr' or 'pet'.
+    lta_path : file path. The path of the .reg.lta file, containing information of the linear transform. 
+    thr : float in [0, 1]. The threshold for mapping decimal values to binary 
+          values for the PET mask transformed from MR domain.
+    save_bfthr_mask : True - save the intermediate decimal-valued mask before thresholding; 
+                      False - do not save.  
+    op_dir : directory path. The path of the output directory where the output mask is stored. 
 
     Returns
     -------
-    opmask_path: string, file path
-        The path of the output mask file, ending in .nii.gz
+    opmask_path: file path. The path of the output mask file, ending in .nii.gz
 
     """
     
@@ -180,31 +174,33 @@ def linear_transform(ipmask_path, inDomain, outDomain, lta_path, thr, save_bfthr
 
 
 
-def create_PET_mask_including(in_IDs, thr, save_PET_bfthr_mask, save_MR_mask, opROI_name, op_dir, env):
+def create_PET_mask_including(
+        in_IDs: list[int], 
+        thr: float, 
+        save_PET_bfthr_mask: bool, 
+        save_MR_mask: bool, 
+        opROI_name: str, 
+        op_dir: str, 
+        env: Environment) -> str:
     """
-    Create an MR mask (binary .nii.gz image) that includes the given ROIs. 
+    Create a PET mask (binary .nii.gz image) that includes the given ROIs. 
     
     Parameters
     ----------
-    in_IDs : a list of integers
-        The integer IDs of ROIs that the mask should include. 
-    thr : float in [0, 1]
-        The threshold for deciding 0 or 1 for decimal voxel values in the mask transformed from MR domain to PET domain.
-    save_PET_bfthr_mask : boolean
-        True: save the intermediate decimal-valued PET mask before thresholding; False: do not save. 
-    save_MR_mask : boolean
-        True: save the intermediate MR mask; False: do not save.
-    opROI_name : string 
-        The name of the output combined ROI. 
-    op_dir : string, directory path
-        The path of the output directory where the output mask is stored. 
-    env : an Environment object
-        Includes the environment paths. 
+    in_IDs : The integer IDs of ROIs that the mask should include. 
+    thr : float in [0, 1]. The threshold for mapping decimal values to binary 
+          values for the PET mask transformed from MR domain.
+    save_PET_bfthr_mask : True - save the intermediate decimal-valued PET mask before thresholding; 
+                          False - do not save. 
+    save_MR_mask : True - save the intermediate MR mask; 
+                   False - do not save.
+    opROI_name : The name of the output combined ROI. 
+    op_dir : directory path. The path of the output directory where the output mask is stored. 
+    env : contains the environment paths. 
 
     Returns
     -------
-    PETmask_path : TYPE
-        DESCRIPTION.
+    PETmask_path : file path of the PET mask.
     """
 
     MRmask_path = create_MR_mask_including(
