@@ -7,7 +7,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray
-from ..core import ROI, Environment
+#from ..core import ROI, Environment
 
 
 
@@ -349,6 +349,23 @@ def model_unit_table(model_name: str) -> dict[str, str]:
                       'VS': 'unitless',
                       'VT': 'unitless',
                       'BPND': 'unitless'}
+        
+    elif model_name == 'logan':
+        unit_table = {'K': 'unitless',
+                      'intercept': 'min',
+                      'tstart': 'min'}
+    
+    elif model_name == 'RTM':
+        unit_table = {'R1': 'unitless',
+                      'k2': '/min',
+                      'k3': '/min',
+                      'BPND': 'unitless',
+                      'k4': '/min'}    
+
+    elif model_name == 'SRTM':
+        unit_table = {'R1': 'unitless',
+                      'k2': '/min',
+                      'BPND': 'unitless'}
     
     return unit_table
 
@@ -389,6 +406,38 @@ def export_km_params(
 
 
 
+
+def discrete_integrate(f: NDArray, t: NDArray) -> NDArray:
+    """
+    Integration of the curve defined by sampled points. 
+
+    Parameters
+    ----------
+    f : sampled values of the curve, length N
+    t : time stamps of sampling, length N
+
+    Returns
+    -------
+    intf : integration of f over t, length N-1
+    """
+    
+    # Basically, we just find the areas of a series of trapezoids and 
+    # accumulatively add them together
+    
+    
+    dt = t[1:] - t[:-1]
+    
+    top = f[:-1]  # trapezoid top sides
+    bottom = f[1:]  # trapezoid bottom sides
+    
+    # areas of trapezoids 
+    areas = (top + bottom) * dt / 2.0
+    
+    # cumulative sum of areas
+    intf = np.cumsum(areas)
+    
+    return intf
+
             
 if __name__ == "__main__":
     
@@ -417,9 +466,16 @@ if __name__ == "__main__":
     # print(FS.start_points)
     # print(FS.mid_points)
     
-    col1_data, col2_data = read_from_csv_twocols('/Users/zeyuzhou/Documents/kinetic_modeling_test/FEPPA_20190523_AA_31002478/AIF/arterial_plasma_tac.csv')
-    print(col1_data)
-    print(col2_data)
+    # col1_data, col2_data = read_from_csv_twocols('/Users/zeyuzhou/Documents/kinetic_modeling_test/FEPPA_20190523_AA_31002478/AIF/arterial_plasma_tac.csv')
+    # print(col1_data)
+    # print(col2_data)
+    
+    
+    f = np.array([1,1,2,1])
+    t = np.array([1,2,4,8])
+    intf = discrete_integrate(f, t)
+    
+    print('intf =', intf)
     
     pass
     
