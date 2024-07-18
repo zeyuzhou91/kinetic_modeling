@@ -6,8 +6,9 @@ import os
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+import shutil
 from numpy.typing import NDArray
-#from ..core import ROI, Environment
+# from ..core import ROI, Environment
 
 
 
@@ -164,6 +165,20 @@ def plot_timecurve(tc):
     
 
 
+def delete_folder_contents(folder):
+    
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+        
+    return None
+
 
 
 def extract_file_name(file_path):
@@ -259,6 +274,43 @@ def write_to_csv_twocols(header1, arr1, header2, arr2, csvfile_path):
 
 
 
+def write_to_csv_multicols(arr: NDArray, headers: list[str], units: list[str], csvfile_path: str):
+    """
+    Write the arrays to a CSV file.  
+
+    Parameters
+    ----------
+    arr: dimension N x m
+    headers: length N
+    units: length N
+    csvfile_path : string, file path, ending in .csv
+
+    Returns
+    -------
+    None.
+
+    """
+        
+    with open(csvfile_path, 'w', newline='') as csvfile:
+        # Create a CSV writer object
+        csv_writer = csv.writer(csvfile)
+
+        # Write the header
+        csv_writer.writerow(headers)
+        
+        # Write the unit
+        csv_writer.writerow(units)
+
+        # Write the data
+        # Basically, we need to write in the transpose of arr
+        N, m = arr.shape
+        for i in range(m):
+            csv_writer.writerow(arr[:, i])
+    
+    return None
+
+
+
 def read_from_csv_onecol(filepath: str) -> (list[float], str, str):
     """
     Read a CSV file with one column, output the header, unit, and the data.
@@ -325,6 +377,50 @@ def read_from_csv_twocols(filepath: str) -> (list[float], str, str, list[float],
     return data1, header1, unit1, data2, header2, unit2     
 
 
+def read_from_csv_fourcols(filepath: str) -> (list[float], list[float], list[float], list[float]):
+    """
+    Read a CSV file with  four columns, output the data. 
+
+    Parameters
+    ----------
+    filepath : file path, ending in .csv. Has four columns, 1st row is headers,
+        2nd row is units. 
+    """
+    
+    data1 = []
+    data2 = []
+    data3 = []
+    data4 = []
+
+    # Read from CSV file
+    with open(filepath, 'r') as csvfile:
+        # Create a CSV reader object
+        csv_reader = csv.reader(csvfile)
+
+        # Read the header row
+        headers = next(csv_reader)
+
+        # # Extract header names
+        # header1, header2, header3, header4 = headers[0], headers[1]
+        
+        # Read the unit row
+        units = next(csv_reader)
+        
+        # # Extract the units
+        # unit1, unit2, unit3, unit4 = units[0], units[1]
+        
+
+        # Read the data into arrays
+        for row in csv_reader:
+            data1.append(float(row[0]))
+            data2.append(float(row[1]))
+            data3.append(float(row[2]))
+            data4.append(float(row[3]))
+
+    return data1, data2, data3, data4
+
+
+
 
 def model_unit_table(model_name: str) -> dict[str, str]:
     """
@@ -350,8 +446,8 @@ def model_unit_table(model_name: str) -> dict[str, str]:
                       'VT': 'unitless',
                       'BPND': 'unitless'}
         
-    elif model_name == 'logan':
-        unit_table = {'K': 'unitless',
+    elif model_name == 'Logan':
+        unit_table = {'slope': 'unitless',
                       'intercept': 'min',
                       'tstart': 'min'}
     
@@ -368,41 +464,6 @@ def model_unit_table(model_name: str) -> dict[str, str]:
                       'BPND': 'unitless'}
     
     return unit_table
-
-
-def export_km_params(
-        rois: list[ROI], 
-        model_name: str, 
-        opfile_path: str) -> None:
-    """
-    Export kinetic modeling parameters of the given ROIs to an csv file. 
-    """
-    
-    unit_table = model_unit_table(model_name)
-
-    header_row = ['Tissue']
-    unit_row = ['']
-    for par in rois[0].m.params.keys():
-        header_row.append(par)
-        unit_row.append(unit_table[par])
-    
-    
-    # Writing to CSV file
-    with open(opfile_path, 'w', newline='') as csvfile:
-        # Create a CSV writer object
-        csv_writer = csv.writer(csvfile)
-            
-        # Write the header row
-        csv_writer.writerow(header_row)
-        
-        # Write the unit row
-        csv_writer.writerow(unit_row)
-    
-        for roi in rois:
-            row = [roi.name] + list(roi.m.params.values())
-            csv_writer.writerow(row)
-            
-    return None
 
 
 

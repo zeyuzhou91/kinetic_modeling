@@ -7,9 +7,8 @@ import numpy as np
 import nibabel as nib
 import copy
 import os
+from skimage.morphology import ball, binary_dilation
 from . import aux  # NOTE: simply "import aux" won't work
-from ..core import Environment 
-
 
 
 def create_MR_mask_including(
@@ -41,7 +40,7 @@ def create_MR_mask_including(
     mask_opROI_data = copy.deepcopy(seg.get_fdata())
     
     # Find the binary mask for the output ROI, including the in_IDs
-    mask_opROI_data = np.isin(mask_opROI_data, in_IDs).astype(float)
+    mask_opROI_data = np.isin(mask_opROI_data, in_IDs).astype(int)
     
     # Make the nifti mask image
     mask_opROI = nib.Nifti1Image(mask_opROI_data, seg.affine, seg.header)
@@ -86,7 +85,7 @@ def create_MR_mask_excluding(
     mask_opROI_data = copy.deepcopy(seg.get_fdata())
     
     # Find the binary mask for the output ROI, excluding the ex_IDs
-    mask_opROI_data = (~np.isin(mask_opROI_data, ex_IDs)).astype(float)
+    mask_opROI_data = (~np.isin(mask_opROI_data, ex_IDs)).astype(int)
     
     # Make the nifti mask image
     mask_opROI = nib.Nifti1Image(mask_opROI_data, seg.affine, seg.header)
@@ -148,6 +147,9 @@ def linear_transform(
     opmask_bfthr_fullname = opmask_bfthr_basename + extension
     opmask_bfthr_path = os.path.join(op_dir, opmask_bfthr_fullname)
     
+    # Check if the lta_path exists
+    assert os.path.isfile(lta_path) is True, f"""The lta_path {lta_path} does not exist."""
+    
     # map the input mask from inDomain to outDomain
     # mapped mask has decimal values
     os.system(f'$FREESURFER_HOME/bin/mri_convert -at {lta_path} {ipmask_path} {opmask_bfthr_path}')
@@ -157,7 +159,7 @@ def linear_transform(
     opmask_bfthr_data = opmask_bfthr.get_fdata()
     
     # thresholding the bfthr output mask (decimal) to make it binary
-    opmask_data = (opmask_bfthr_data >= thr).astype(float)
+    opmask_data = (opmask_bfthr_data >= thr).astype(int)
     opmask = nib.Nifti1Image(opmask_data, opmask_bfthr.affine, opmask_bfthr.header)
     
     # name and path of the binary output mask
@@ -180,8 +182,10 @@ def create_PET_mask_including(
         save_PET_bfthr_mask: bool, 
         save_MR_mask: bool, 
         opROI_name: str, 
-        op_dir: str, 
-        env: Environment) -> str:
+        seg_path: str,
+        mr_masks_dir: str,
+        mr2pet_lta_path: str,
+        op_dir: str) -> str:
     """
     Create a PET mask (binary .nii.gz image) that includes the given ROIs. 
     
@@ -195,8 +199,10 @@ def create_PET_mask_including(
     save_MR_mask : True - save the intermediate MR mask; 
                    False - do not save.
     opROI_name : The name of the output combined ROI. 
-    op_dir : directory path. The path of the output directory where the output mask is stored. 
-    env : contains the environment paths. 
+    seg_path: segmentation file path
+    mr_masks_dir: directory path of the MR masks folder
+    mr2pet_lta_path: file path of the mr2pet lta transformation
+    op_dir : directory path. The path of the output directory where the output mask is stored.  
 
     Returns
     -------
@@ -205,15 +211,15 @@ def create_PET_mask_including(
 
     MRmask_path = create_MR_mask_including(
         in_IDs = in_IDs,
-        seg_path = env.seg_path,
+        seg_path = seg_path,
         opROI_name = opROI_name,
-        op_dir = env.masks_dir)
+        op_dir = mr_masks_dir)
 
     PETmask_path = linear_transform(
         ipmask_path = MRmask_path,
         inDomain = 'mr',
         outDomain = 'pet',
-        lta_path = env.mr2pet_lta_path,
+        lta_path = mr2pet_lta_path,
         thr = thr,
         save_bfthr_mask = save_PET_bfthr_mask,
         op_dir = op_dir)
@@ -224,7 +230,64 @@ def create_PET_mask_including(
         
     return PETmask_path
 
-            
+       
+
+def create_PET_mask_excluding(
+        ex_IDs: list[int], 
+        thr: float, 
+        save_PET_bfthr_mask: bool, 
+        save_MR_mask: bool, 
+        opROI_name: str, 
+        seg_path: str,
+        mr_masks_dir: str,
+        mr2pet_lta_path: str,
+        op_dir: str) -> str:
+    """
+    Create a PET mask (binary .nii.gz image) that excludes the given ROIs. 
+    
+    Parameters
+    ----------
+    ex_IDs : The integer IDs of ROIs that the mask should exclude. 
+    thr : float in [0, 1]. The threshold for mapping decimal values to binary 
+          values for the PET mask transformed from MR domain.
+    save_PET_bfthr_mask : True - save the intermediate decimal-valued PET mask before thresholding; 
+                          False - do not save. 
+    save_MR_mask : True - save the intermediate MR mask; 
+                   False - do not save.
+    opROI_name : The name of the output combined ROI. 
+    seg_path: segmentation file path
+    mr_masks_dir: directory path of the MR masks folder
+    mr2pet_lta_path: file path of the mr2pet lta transformation
+    op_dir : directory path. The path of the output directory where the output mask is stored. 
+
+    Returns
+    -------
+    PETmask_path : file path of the PET mask.
+    """
+
+    MRmask_path = create_MR_mask_excluding(
+        ex_IDs = ex_IDs,
+        seg_path = seg_path,
+        opROI_name = opROI_name,
+        op_dir = mr_masks_dir)
+        
+    PETmask_path = linear_transform(
+        ipmask_path = MRmask_path,
+        inDomain = 'mr',
+        outDomain = 'pet',
+        lta_path = mr2pet_lta_path,
+        thr = thr,
+        save_bfthr_mask = save_PET_bfthr_mask,
+        op_dir = op_dir)
+
+    if save_MR_mask == False:
+        # delete the MR mask
+        os.remove(MRmask_path)
+        
+    return PETmask_path        
+
+
+
 
 def generate_masked_img(ipimg_path, mask_path, maskedROI_name, op_dir):
     """
@@ -300,7 +363,109 @@ def generate_masked_img(ipimg_path, mask_path, maskedROI_name, op_dir):
     return opimg_path
             
         
+
+
+def dilation(
+        ball_radius: float,
+        ippath: str,
+        oppath: str) -> None:
+    """
+    Dilate the mask by a ball with a given radius.
+
+    """
+
+    # load input image
+    ip = nib.load(ippath)
+    
+    # make a copy of the image 
+    op_data = copy.deepcopy(ip.get_fdata())
+    
+    # dilation by a 
+    op_data = binary_dilation(op_data, ball(ball_radius)).astype(op_data.dtype)
+    
+    # Make the output image
+    op = nib.Nifti1Image(op_data, ip.affine, ip.header)
             
+    # Save the output image
+    nib.save(op, oppath)
+    
+    return None 
+
+
+
+
+def union(
+        ippath1: str,
+        ippath2: str,
+        oppath: str) -> None:
+    """
+    Find the union of two masks.
+    """
+
+    ip1 = nib.load(ippath1)
+    ip1_data = copy.deepcopy(ip1.get_fdata()).astype(int)
+    
+    ip2 = nib.load(ippath2)
+    ip2_data = copy.deepcopy(ip2.get_fdata()).astype(int)
+    
+    op_data = ip1_data | ip2_data
+    
+    # Make the output image
+    op = nib.Nifti1Image(op_data, ip1.affine, ip1.header)
             
+    # Save the output image
+    nib.save(op, oppath)
+    
+    return None
+
+
+def intersect(
+        ippath1: str,
+        ippath2: str,
+        oppath: str) -> None:
+    """
+    Find the intersection of two masks.
+    """
+
+    ip1 = nib.load(ippath1)
+    ip1_data = copy.deepcopy(ip1.get_fdata()).astype(int)
+    
+    ip2 = nib.load(ippath2)
+    ip2_data = copy.deepcopy(ip2.get_fdata()).astype(int)
+    
+    op_data = ip1_data & ip2_data
+    
+    # Make the output image
+    op = nib.Nifti1Image(op_data, ip1.affine, ip1.header)
             
+    # Save the output image
+    nib.save(op, oppath)
+    
+    return None
+
+
+def minus(
+        ippath1: str,
+        ippath2: str,
+        oppath: str) -> None:
+    """
+    Find all regions in image1 that is not in image2. 
+    """
+
+    ip1 = nib.load(ippath1)
+    ip1_data = copy.deepcopy(ip1.get_fdata()).astype(int)
+    
+    ip2 = nib.load(ippath2)
+    ip2_data = copy.deepcopy(ip2.get_fdata()).astype(int)
+    
+    intersect = ip1_data & ip2_data 
+    
+    op_data = np.logical_xor(ip1_data, intersect)
+
+    # Make the output image
+    op = nib.Nifti1Image(op_data, ip1.affine, ip1.header)
             
+    # Save the output image
+    nib.save(op, oppath)
+    
+    return None
